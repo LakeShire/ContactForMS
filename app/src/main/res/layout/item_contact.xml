@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="@dimen/item_contact_size"
+    android:layout_height="@dimen/item_contact_size">
+
+    <View
+        android:id="@+id/v_highlight"
+        android:layout_width="72dp"
+        android:layout_height="72dp"
+        android:layout_centerInParent="true"
+        android:visibility="invisible"
+        android:background="@drawable/bg_image_border" />
+
+    <ImageView
+        android:id="@+id/iv_avatar"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:layout_centerInParent="true"
+        tools:src="@drawable/amanda_brady" />
+</RelativeLayout>
