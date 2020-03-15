@@ -15,6 +15,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.contacts.R;
 import com.example.contacts.model.Contact;
 import com.example.contacts.util.BaseUtil;
+import com.example.contacts.util.Constants;
 
 import java.util.List;
 
@@ -36,9 +37,9 @@ public class ContactAdapter extends RecyclerView.Adapter<ContactAdapter.ContactH
         mContext = context;
         mList = contacts;
         if (orientation == ORIENTATION_LANDSCAPE) {
-            mSize = (int) (BaseUtil.getScreenHeight((Activity) mContext) - mContext.getResources().getDimension(R.dimen.title_bar_height)) / 3;
+            mSize = (int) (BaseUtil.getScreenHeight((Activity) mContext) - mContext.getResources().getDimension(R.dimen.title_bar_height)) / Constants.ITEM_COUNT_CONTACT_LAND;
         } else {
-            mSize = BaseUtil.getScreenWidth((Activity) mContext) / 5;
+            mSize = BaseUtil.getScreenWidth((Activity) mContext) / Constants.ITEM_COUNT_CONTACT_PORT;
         }
     }
 

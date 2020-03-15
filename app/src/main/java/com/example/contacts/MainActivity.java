@@ -2,15 +2,11 @@ package com.example.contacts;
 
 import android.content.res.Configuration;
 import android.os.Bundle;
-import android.util.DisplayMetrics;
-import android.util.Log;
 import android.view.View;
-import android.view.animation.LinearInterpolator;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.LinearSmoothScroller;
 import androidx.recyclerview.widget.LinearSnapHelper;
 import androidx.recyclerview.widget.PagerSnapHelper;
 import androidx.recyclerview.widget.RecyclerView;
@@ -20,6 +16,7 @@ import com.example.contacts.adapter.InfoAdapter;
 import com.example.contacts.manager.ContactManager;
 import com.example.contacts.model.Contact;
 import com.example.contacts.util.BaseUtil;
+import com.example.contacts.util.Constants;
 import com.example.contacts.util.StatusUtil;
 import com.example.contacts.view.FixLinearLayoutManager;
 import com.example.contacts.view.OnViewPagerListener;
@@ -50,6 +47,7 @@ public class MainActivity extends AppCompatActivity implements ContactManager.Ca
     private int mAvailableHeight;
     private int mPosition = -1;
     private int mScreenWidth;
+    private int mY;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -72,11 +70,11 @@ public class MainActivity extends AppCompatActivity implements ContactManager.Ca
         mOrientation = config.orientation;
         mAvailableHeight = (int) (BaseUtil.getScreenHeight(this) - getResources().getDimension(R.dimen.title_bar_height));
         if (mOrientation == ORIENTATION_LANDSCAPE) {
-            mContactSize = mAvailableHeight / 3;
-            mDummyCount = 1;
+            mContactSize = mAvailableHeight / Constants.ITEM_COUNT_CONTACT_LAND;
+            mDummyCount = Constants.ITEM_COUNT_DUMMY_LAND;
         } else {
-            mContactSize = BaseUtil.getScreenWidth(this) / 5;
-            mDummyCount = 2;
+            mContactSize = BaseUtil.getScreenWidth(this) / Constants.ITEM_COUNT_CONTACT_PORT;
+            mDummyCount = Constants.ITEM_COUNT_DUMMY_PORT;
         }
 
         mScreenWidth = BaseUtil.getScreenWidth(this);
@@ -115,7 +113,7 @@ public class MainActivity extends AppCompatActivity implements ContactManager.Ca
                 // because the detail list don't need dummy item, so there is a position transform
                 mPosition = position;
                 highLight(position + mDummyCount);
-//                adjustContactToCenter(position + mDummyCount);
+                adjustContactToCenter(position + mDummyCount, false);
             }
         };
         helper.attachToRecyclerView(mRvInfo);
@@ -127,6 +125,7 @@ public class MainActivity extends AppCompatActivity implements ContactManager.Ca
                 super.onScrollStateChanged(recyclerView, newState);
                 if (newState == SCROLL_STATE_IDLE) {
                     // when scrolling is done, we got current position from SnapHelper
+                    mY = 0;
                     mRvContacts.addOnScrollListener(mContactScrollListener);
                     View view = helper.findSnapView(lm);
                     if (view != null) {
@@ -145,13 +144,17 @@ public class MainActivity extends AppCompatActivity implements ContactManager.Ca
             @Override
             public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
                 super.onScrolled(recyclerView, dx, dy);
-                // when the detail list is scrolled, the avatar list will be scrolled as well, using the same rate;
-                float rate = ((float) dy) / mInfoHeight;
-                int distance = (int) (mContactSize * rate);
-                if (mOrientation == ORIENTATION_LANDSCAPE) {
-                    mRvContacts.scrollBy(0, distance);
-                } else {
-                    mRvContacts.scrollBy(distance, 0);
+                    // when the detail list is scrolled, the avatar list will be scrolled as well, using the same rate;
+                mY += dy;
+                if (Math.abs(mY) > 10) {
+                    float rate = ((float) mY) / mInfoHeight;
+                    int distance = (int) (mContactSize * rate);
+                    if (mOrientation == ORIENTATION_LANDSCAPE) {
+                        mRvContacts.scrollBy(0, distance);
+                    } else {
+                        mRvContacts.scrollBy(distance, 0);
+                    }
+                    mY = 0;
                 }
             }
         };
@@ -195,14 +198,16 @@ public class MainActivity extends AppCompatActivity implements ContactManager.Ca
             @Override
             public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
                 super.onScrolled(recyclerView, dx, dy);
-                float rate;
-                if (mOrientation == ORIENTATION_LANDSCAPE) {
-                    rate = ((float) dy) / mContactSize;
-                } else {
-                    rate = ((float) dx) / mContactSize;
+                if (recyclerView.getScrollState() != RecyclerView.SCROLL_STATE_IDLE) {
+                    float rate;
+                    if (mOrientation == ORIENTATION_LANDSCAPE) {
+                        rate = ((float) dy) / mContactSize;
+                    } else {
+                        rate = ((float) dx) / mContactSize;
+                    }
+                    int y = (int) (mInfoHeight * rate);
+                    mRvInfo.scrollBy(0, y);
                 }
-                int y = (int) (mInfoHeight * rate);
-                mRvInfo.scrollBy(0, y);
             }
         };
         mRvContacts.addOnScrollListener(mContactScrollListener);
@@ -212,17 +217,17 @@ public class MainActivity extends AppCompatActivity implements ContactManager.Ca
             public void onItemClicked(int position) {
                 // highlight the avatar and move it to the center of screen
                 highLight(position);
-                adjustContactToCenter(position);
+                adjustContactToCenter(position, true);
             }
         });
         mRvContacts.setAdapter(mContactAdapter);
     }
 
-    private void adjustContactToCenter(int position) {
+    private void adjustContactToCenter(int position, boolean smooth) {
         RecyclerView.LayoutManager manager = mRvContacts.getLayoutManager();
         if (manager instanceof LinearLayoutManager) {
             int firstPosition = ((LinearLayoutManager) manager).findFirstVisibleItemPosition();
-            int lastPosition = ((LinearLayoutManager) manager).findLastCompletelyVisibleItemPosition();
+//            int lastPosition = ((LinearLayoutManager) manager).findLastCompletelyVisibleItemPosition();
 //            int startP = position - firstPosition;
 //            int endP = lastPosition - position;
 //            if (startP >= 0 && startP < mRvContacts.getChildCount() && endP >= 0 && endP < mRvContacts.getChildCount()) {
@@ -242,10 +247,18 @@ public class MainActivity extends AppCompatActivity implements ContactManager.Ca
             if (view != null) {
                 if (mOrientation == ORIENTATION_LANDSCAPE) {
                     int offset = (view.getTop() + (view.getBottom() - view.getTop()) / 2) - mAvailableHeight / 2;
-                    mRvContacts.smoothScrollBy(0, offset);
+                    if (smooth) {
+                        mRvContacts.smoothScrollBy(0, offset);
+                    } else {
+                        mRvContacts.scrollBy(0, offset);
+                    }
                 } else {
                     int offset = (view.getLeft() + (view.getRight() - view.getLeft()) / 2) - mScreenWidth / 2;
-                    mRvContacts.smoothScrollBy(offset, 0);
+                    if (smooth) {
+                        mRvContacts.smoothScrollBy(offset, 0);
+                    } else {
+                        mRvContacts.scrollBy(offset, 0);
+                    }
                 }
             }
         }
@@ -298,9 +311,9 @@ public class MainActivity extends AppCompatActivity implements ContactManager.Ca
                         } else {
                             // or scroll the list to put the first item in the center
                             if (mOrientation == ORIENTATION_LANDSCAPE) {
-                                mRvContacts.scrollBy(0, mAvailableHeight / 2);
+                                mRvContacts.smoothScrollToPosition(mDummyCount);
                             } else {
-                                mRvContacts.scrollBy(BaseUtil.getScreenWidth(MainActivity.this) / 2, 0);
+                                mRvContacts.smoothScrollToPosition(mDummyCount);
                             }
                         }
                         if (mOrientation == ORIENTATION_LANDSCAPE) {
